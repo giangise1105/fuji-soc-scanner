@@ -30,7 +30,6 @@ body{background:var(--bg);color:var(--text);font:var(--font-base)/1.4 system-ui,
 /* Header */
 #app-header{position:sticky;top:0;height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:100}
 #app-header .title{font-size:18px;font-weight:700}
-.version{font-size:13px;color:#555}
 /* Tab content */
 .tab-content{min-height:calc(100vh - 56px - 64px);padding-bottom:80px}
 /* Bottom nav */
@@ -101,7 +100,6 @@ label{display:block;font-size:14px;color:#777;margin-bottom:6px}
 
 <header id="app-header">
   <span class="title">SOC Scanner</span>
-  <span class="version">v1.0.0</span>
 </header>
 
 <!-- Tab: Scanner -->
@@ -146,11 +144,6 @@ label{display:block;font-size:14px;color:#777;margin-bottom:6px}
     <h3>🗑️ Xóa dữ liệu</h3>
     <button id="btn-delete-all" class="btn-danger btn-block">Xóa toàn bộ</button>
     <p class="hint">Cẩn thận: hành động này không thể hoàn tác. Hãy export CSV trước.</p>
-  </div>
-  <div class="settings-section">
-    <h3>ℹ️ Phiên bản</h3>
-    <p style="color:#ccc">SOC Scanner v1.0.0</p>
-    <p class="hint">Cache version: soc-v1.0.0</p>
   </div>
   <div class="settings-section">
     <h3>📱 Cài đặt vào màn hình chính</h3>
@@ -354,8 +347,13 @@ async function _startScanner() {
   }
 }
 
-function pauseScanner() { if (_qr && _qrRunning) try { _qr.pause(true); } catch(e) {} }
-function resumeScanner() { if (_qr && _qrRunning) try { _qr.resume(); } catch(e) {} }
+async function stopScanner() {
+  if (_qr) { try { if (_qrRunning) await _qr.stop(); _qr.clear(); } catch(e) {} _qr = null; }
+  _qrRunning = false;
+  document.getElementById('btn-start-scan').hidden = false;
+  document.getElementById('scan-status').textContent = 'Bấm Bắt đầu qu\xe9t để mở camera';
+  document.getElementById('scanner-container').innerHTML = '';
+}
 
 function _onScan(text) {
   const soc = _validateSoc(text);
@@ -365,7 +363,7 @@ function _onScan(text) {
     st.textContent = '⚠️ Kh\xf4ng hợp lệ: ' + text.trim().slice(0, 40);
     return;
   }
-  pauseScanner(); beepSuccess(); vibrate(200); flashScreen('#00ff88', 150);
+  stopScanner(); beepSuccess(); vibrate(200); flashScreen('#00ff88', 150);
   st.textContent = '✓ ' + soc;
   document.dispatchEvent(new CustomEvent('soc-scanned', { detail: { soc } }));
 }
@@ -408,15 +406,15 @@ _frmQty.addEventListener('submit', async e => {
   try {
     await addRecord({ soc: _curSoc, quantity: qty, note: _noteIn.value || null });
     toast('Đ\xe3 lưu ' + _curSoc + ' \xd7 ' + qty, 'success');
-    _closeSht(); resumeScanner();
+    _closeSht();
     document.dispatchEvent(new CustomEvent('record-added'));
   } catch (err) {
     toast('Lỗi: ' + err.message, 'error');
   } finally { sv.disabled = false; }
 });
 
-document.getElementById('btn-cancel').addEventListener('click', () => { _closeSht(); resumeScanner(); });
-_bkd.addEventListener('click', () => { _closeSht(); resumeScanner(); });
+document.getElementById('btn-cancel').addEventListener('click', () => { _closeSht(); });
+_bkd.addEventListener('click', () => { _closeSht(); });
 document.addEventListener('soc-scanned', e => _openSht(e.detail.soc));
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
