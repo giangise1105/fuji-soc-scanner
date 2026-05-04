@@ -107,7 +107,7 @@ body{background:var(--bg);color:var(--text);font:var(--font-base)/1.4 system-ui,
 #history-table{width:100%;border-collapse:collapse;font-size:13px}
 #history-table th{text-align:left;padding:10px 6px;border-bottom:2px solid var(--border);background:var(--bg);color:var(--accent);position:sticky;top:calc(56px + 88px);z-index:5;font-size:12px}
 #history-table td{padding:12px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
-.col-soc{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-weight:700;font-size:13px;color:var(--text)}
+.col-soc{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-weight:700;font-size:13px;color:var(--text);white-space:nowrap}
 .col-qty{text-align:right;font-weight:700;color:var(--accent)}
 .col-time{font-size:12px;color:#888;white-space:nowrap}
 .col-note{color:#666;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -505,7 +505,7 @@ document.addEventListener('soc-scanned', e => {
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 function _fmtTime(iso) {
   const d = new Date(iso), p = n => String(n).padStart(2,'0');
-  return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+  return p(d.getDate())+'/'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes());
 }
 function _esc(s) {
   return String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
