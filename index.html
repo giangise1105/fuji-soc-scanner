@@ -55,16 +55,15 @@ body{background:var(--bg);color:var(--text);font:var(--font-base)/1.4 system-ui,
 #search-input{flex:1;padding:10px 12px;min-height:44px;background:var(--bg);color:var(--text);border:2px solid var(--border);border-radius:var(--tap-radius);font-size:16px;outline:none;-webkit-appearance:none}
 #search-input:focus{border-color:var(--accent)}
 .btn-export{padding:10px 12px;min-height:44px;font-size:14px;white-space:nowrap}
-/* History table */
-#history-table{width:100%;border-collapse:collapse;font-size:13px}
-#history-table th{text-align:left;padding:10px 6px;border-bottom:2px solid var(--border);background:var(--bg);color:var(--accent);position:sticky;top:calc(56px + 88px);z-index:5;font-size:12px}
-#history-table td{padding:12px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
-.col-soc{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-weight:700;font-size:13px;color:var(--text);white-space:nowrap}
-.col-qty{text-align:right;font-weight:700;color:var(--accent)}
-.col-time{font-size:12px;color:#888;white-space:nowrap}
-.col-note{color:#666;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.col-date{font-size:12px;color:#888;white-space:nowrap}
-@media(max-width:359px){.col-date{display:none}}
+/* History list (card layout) */
+.rec-item{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.rec-body{flex:1;min-width:0}
+.rec-row1{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:3px}
+.rec-soc{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-weight:700;font-size:14px;color:var(--text)}
+.rec-qty{font-weight:700;font-size:15px;color:var(--accent);white-space:nowrap}
+.rec-row2{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.rec-meta{font-size:12px;color:#888}
+.rec-note{font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px}
 .btn-delete-row{min-width:44px;min-height:44px;background:transparent;border:none;color:var(--error);font-size:20px;cursor:pointer;padding:8px;-webkit-tap-highlight-color:transparent}
 /* Empty state */
 .empty-state{text-align:center;padding:60px 20px;color:#555;font-size:16px;line-height:1.8}
@@ -127,12 +126,7 @@ label{display:block;font-size:14px;color:#777;margin-bottom:6px}
     <p>Chưa có dữ liệu.<br>Bấm tab <strong>Quét</strong> để bắt đầu.</p>
   </div>
   <div id="history-table-wrap" hidden>
-    <table id="history-table">
-      <thead><tr>
-        <th>Thời gian</th><th>SOC</th><th class="col-date">Ngày SX</th><th>Qty</th><th>Note</th><th></th>
-      </tr></thead>
-      <tbody id="history-tbody"></tbody>
-    </table>
+    <div id="history-list"></div>
   </div>
 </section>
 
@@ -464,18 +458,21 @@ function _trunc(s, n) { n=n||30; if(!s)return''; return s.length>n?s.slice(0,n)+
 async function refreshHistory(q) {
   try {
     const recs = q ? await searchRecords(q) : await getAllRecords();
-    const tbody=document.getElementById('history-tbody'), empty=document.getElementById('history-empty'), wrap=document.getElementById('history-table-wrap');
+    const list=document.getElementById('history-list'), empty=document.getElementById('history-empty'), wrap=document.getElementById('history-table-wrap');
     if (!recs.length) { empty.hidden=false; wrap.hidden=true; }
     else {
       empty.hidden=true; wrap.hidden=false;
-      tbody.innerHTML = recs.map(r =>
-        '<tr><td class="col-time">'+_fmtTime(r.timestamp)+'</td>'+
-        '<td class="col-soc">'+_esc(r.soc)+'</td>'+
-        '<td class="col-date">'+_esc(r.productionDate||'—')+'</td>'+
-        '<td class="col-qty">'+_esc(String(r.quantity))+'</td>'+
-        '<td class="col-note" title="'+_esc(r.note??'')+'">'+_esc(_trunc(r.note))+'</td>'+
-        '<td><button class="btn-delete-row" data-id="'+_esc(String(r.id))+'" aria-label="X\xf3a">🗑️</button></td></tr>'
-      ).join('');
+      list.innerHTML = recs.map(r => {
+        const datePart = r.productionDate ? '<span class="rec-meta">'+_esc(r.productionDate)+'</span>' : '';
+        const notePart = r.note ? '<span class="rec-note" title="'+_esc(r.note)+'">'+_esc(_trunc(r.note))+'</span>' : '';
+        return '<div class="rec-item">'+
+          '<div class="rec-body">'+
+            '<div class="rec-row1"><span class="rec-soc">'+_esc(r.soc)+'</span><span class="rec-qty">\xd7'+_esc(String(r.quantity))+'</span></div>'+
+            '<div class="rec-row2"><span class="rec-meta">'+_fmtTime(r.timestamp)+'</span>'+datePart+notePart+'</div>'+
+          '</div>'+
+          '<button class="btn-delete-row" data-id="'+_esc(String(r.id))+'" aria-label="X\xf3a">🗑️</button>'+
+        '</div>';
+      }).join('');
     }
     const dispQty = recs.reduce((s, r) => s + (r.quantity || 0), 0);
     const label = q ? 'kết quả' : 'd\xf2ng';
@@ -495,7 +492,7 @@ document.getElementById('search-input').addEventListener('input', e => {
   _srchT = setTimeout(() => refreshHistory(e.target.value.trim()), 200);
 });
 
-document.getElementById('history-tbody').addEventListener('click', async e => {
+document.getElementById('history-list').addEventListener('click', async e => {
   const btn = e.target.closest('.btn-delete-row');
   if (!btn) return;
   if (!confirm('X\xf3a record n\xe0y?')) return;
