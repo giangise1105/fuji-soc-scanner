@@ -375,7 +375,10 @@ async function stopScanner() {
   document.getElementById('scanner-container').innerHTML = '';
 }
 
-function _onScan(text) {
+let _lastScanSoc = null, _lastScanTime = 0;
+const DEBOUNCE_MS = 1500;
+
+function processInput(text, source) {
   const parsed = _parseQR(text);
   const st = document.getElementById('scan-status');
   if (!parsed) {
@@ -384,12 +387,48 @@ function _onScan(text) {
     return;
   }
   const { soc, productionDate } = parsed;
-  stopScanner(); beepSuccess(); vibrate(200); flashScreen('#00ff88', 150);
-  st.textContent = '✓ ' + soc;
-  document.dispatchEvent(new CustomEvent('soc-scanned', { detail: { soc, productionDate } }));
+  const now = Date.now();
+  if (soc === _lastScanSoc && now - _lastScanTime < DEBOUNCE_MS) return;
+  _lastScanSoc = soc; _lastScanTime = now;
+  if (_qrRunning) { _qrRunning = false; stopScanner(); }
+  beepSuccess(); vibrate(200); flashScreen('#00ff88', 150);
+  st.textContent = '✓ ' + soc + (source === 'pda' ? ' (PDA)' : '');
+  document.dispatchEvent(new CustomEvent('soc-scanned', { detail: { soc, productionDate, source } }));
 }
 
+function _onScan(text) { processInput(text, 'camera'); }
+
 document.getElementById('btn-start-scan').addEventListener('click', () => { _initAudio(); _startScanner(); });
+
+// ── PDA HID SCANNER LISTENER ─────────────────────────────────────────────────
+let _curSoc = null, _curProdDate = null;
+let pdaBuffer = '', pdaLastTime = 0, pdaTimeoutId = null;
+const PDA_GAP_MS = 150;
+const PDA_FLUSH_MS = 200;
+
+document.addEventListener('keydown', e => {
+  if (e.target && e.target.matches('input,textarea,[contenteditable="true"]')) return;
+  if (_curSoc !== null) return;
+
+  const now = Date.now();
+  if (now - pdaLastTime > PDA_GAP_MS) pdaBuffer = '';
+  pdaLastTime = now;
+
+  if (e.key === 'Enter') {
+    if (pdaBuffer.length > 0) {
+      e.preventDefault();
+      const text = pdaBuffer;
+      pdaBuffer = '';
+      clearTimeout(pdaTimeoutId);
+      processInput(text, 'pda');
+    }
+    return;
+  }
+  if (e.key.length === 1) pdaBuffer += e.key;
+
+  clearTimeout(pdaTimeoutId);
+  pdaTimeoutId = setTimeout(() => { pdaBuffer = ''; }, PDA_FLUSH_MS);
+});
 
 // ── BOTTOM SHEET ─────────────────────────────────────────────────────────────
 const _sht = document.getElementById('sheet-qty');
@@ -401,8 +440,6 @@ const _noteIn = document.getElementById('note-input');
 const _noteWrap = document.getElementById('note-wrapper');
 const _togNote = document.getElementById('toggle-note');
 const _frmQty = document.getElementById('form-qty');
-let _curSoc = null, _curProdDate = null;
-
 function _openSht(soc, productionDate) {
   _curSoc = soc; _curProdDate = productionDate || null;
   _socDisp.textContent = soc;

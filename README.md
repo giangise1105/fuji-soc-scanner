@@ -31,6 +31,16 @@ PWA quét QR/barcode mã SOC, lưu local (IndexedDB), export CSV. Chạy 100% of
 | 📋 Lịch sử | Xem records, tìm kiếm, xóa từng dòng, export CSV |
 | ⚙️ Cài đặt | Export tất cả, xóa toàn bộ, hướng dẫn cài đặt |
 
+## PDA Scanner Support
+
+App tự động nhận input từ PDA hardware scanner (HID keyboard mode):
+- Bấm scan trên PDA → app nhận chuỗi → form mở tự động
+- Không cần mode switch, không cần focus input
+- Camera và PDA hoạt động song song
+- Auto-stop camera khi PDA scan thành công
+
+**Yêu cầu PDA:** scanner cấu hình HID Keyboard mode, suffix Enter (mặc định).
+
 ## Format SOC
 
 Regex: `^\d-\d{7,8}-\d{3}$`
