@@ -390,7 +390,7 @@ function processInput(text, source) {
   const now = Date.now();
   if (soc === _lastScanSoc && now - _lastScanTime < DEBOUNCE_MS) return;
   _lastScanSoc = soc; _lastScanTime = now;
-  if (_qrRunning) { _qrRunning = false; stopScanner(); }
+  if (_qrRunning) stopScanner();
   beepSuccess(); vibrate(200); flashScreen('#00ff88', 150);
   st.textContent = '✓ ' + soc + (source === 'pda' ? ' (PDA)' : '');
   document.dispatchEvent(new CustomEvent('soc-scanned', { detail: { soc, productionDate, source } }));
